@@ -1,60 +1,94 @@
 pipeline {
-    agent any
+    agent {
+        label 'windows'
+    }
     
     stages {
-        stage('Instructions') {
+        stage('Initialisation') {
             steps {
-                echo '''
-                    ==============================================
-                    CONFIGURATION REQUISE:
-                    
-                    1. Dans Jenkins, configurez ce pipeline
-                    2. Dans la section "Pipeline", choisir:
-                       - Définition: Pipeline script from SCM
-                       - SCM: Git
-                       - Repository URL: [VOTRE_URL_GITHUB_ICI]
-                       - Branches: */main ou */master
-                    3. Sauvegarder et exécuter
-                    ==============================================
+                bat '''
+                    @echo off
+                    echo ===========================
+                    echo JENKINS WINDOWS BUILD
+                    echo ===========================
+                    echo Date: %date%
+                    echo Time: %time%
+                    echo Build: %BUILD_NUMBER%
+                    echo ===========================
+                    echo.
                 '''
             }
         }
         
-        stage('Clonage automatique') {
+        stage('Vérification fichiers') {
             steps {
-                echo "Le dépôt sera cloné automatiquement via la configuration Jenkins"
-                sh 'ls -la'
-            }
-        }
-        
-        stage('Vérification') {
-            steps {
-                sh '''
-                    echo "=== CONTENU DU PROJET ==="
-                    ls -la
+                bat '''
+                    echo Liste des fichiers...
+                    echo ---------------------
+                    dir
+                    echo.
                     
-                    echo "=== FICHIERS HTML ==="
-                    ls *.html 2>/dev/null || echo "Aucun fichier HTML"
+                    echo Fichiers HTML...
+                    echo -----------------
+                    dir *.html
+                    echo.
                     
-                    echo "=== FICHIERS CSS ==="
-                    ls *.css 2>/dev/null || echo "Aucun fichier CSS"
+                    echo Fichiers CSS...
+                    echo ----------------
+                    dir *.css
+                    echo.
                 '''
             }
         }
         
         stage('Test rapide') {
             steps {
-                sh '''
-                    if [ -f "index.html" ]; then
-                        echo "✓ index.html présent"
-                        echo "Premières lignes:"
-                        head -5 index.html
-                    fi
+                bat '''
+                    echo Test des fichiers...
+                    echo --------------------
                     
-                    if [ -f "style.css" ]; then
-                        echo "✓ style.css présent"
-                        echo "Taille: $(wc -l < style.css) lignes"
-                    fi
+                    if exist index.html (
+                        echo ✓ index.html présent
+                    ) else (
+                        echo ❌ index.html manquant
+                        exit 1
+                    )
+                    
+                    echo.
+                    echo Test de base terminé
+                '''
+            }
+        }
+        
+        stage('Créer archive') {
+            steps {
+                bat '''
+                    echo Création de l'archive...
+                    
+                    mkdir package
+                    copy *.html package\
+                    copy *.css package\
+                    
+                    echo Version: %BUILD_NUMBER% > package\version.txt
+                    echo Date: %date% >> package\version.txt
+                    
+                    powershell -Command "Compress-Archive -Path 'package\\*' -DestinationPath 'site-build-%BUILD_NUMBER%.zip'"
+                    
+                    echo ✓ Archive créée: site-build-%BUILD_NUMBER%.zip
+                '''
+                
+                archiveArtifacts artifacts: 'site-build-*.zip'
+            }
+        }
+        
+        stage('Fin') {
+            steps {
+                bat '''
+                    echo.
+                    echo ===========================
+                    echo BUILD TERMINE
+                    echo ===========================
+                    echo.
                 '''
             }
         }
@@ -62,7 +96,10 @@ pipeline {
     
     post {
         always {
-            echo "Build terminé - Vérifiez la console pour les détails"
+            bat '''
+                echo Nettoyage...
+                if exist package rmdir /S /Q package
+            '''
         }
     }
 }
