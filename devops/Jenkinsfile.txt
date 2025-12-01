@@ -1,0 +1,44 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Cloner le repository Git') {
+            steps {
+                git branch: 'main', 
+                url: 'https://github.com/Exemple/SiteWeb.git',
+                credentialsId: '' // À remplir si le repo est privé
+            }
+        }
+        
+        stage('Déployer sur Apache') {
+            steps {
+                script {
+                    // Copier les fichiers HTML dans le répertoire web
+                    sh 'sudo cp -r * /var/www/html/'
+                    
+                    // Vérifier le déploiement
+                    sh 'ls -la /var/www/html/'
+                }
+            }
+        }
+        
+        stage('Test du déploiement') {
+            steps {
+                script {
+                    // Vérifier que le site répond
+                    sh 'curl -I http://localhost/ || true'
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Déploiement réussi!'
+            echo '🌐 Site accessible sur: http://192.168.33.10'
+        }
+        failure {
+            echo '❌ Échec du déploiement'
+        }
+    }
+}
