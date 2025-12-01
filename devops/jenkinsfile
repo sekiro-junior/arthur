@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Instructions') {
+            steps {
+                echo '''
+                    ==============================================
+                    CONFIGURATION REQUISE:
+                    
+                    1. Dans Jenkins, configurez ce pipeline
+                    2. Dans la section "Pipeline", choisir:
+                       - Définition: Pipeline script from SCM
+                       - SCM: Git
+                       - Repository URL: [VOTRE_URL_GITHUB_ICI]
+                       - Branches: */main ou */master
+                    3. Sauvegarder et exécuter
+                    ==============================================
+                '''
+            }
+        }
+        
+        stage('Clonage automatique') {
+            steps {
+                echo "Le dépôt sera cloné automatiquement via la configuration Jenkins"
+                sh 'ls -la'
+            }
+        }
+        
+        stage('Vérification') {
+            steps {
+                sh '''
+                    echo "=== CONTENU DU PROJET ==="
+                    ls -la
+                    
+                    echo "=== FICHIERS HTML ==="
+                    ls *.html 2>/dev/null || echo "Aucun fichier HTML"
+                    
+                    echo "=== FICHIERS CSS ==="
+                    ls *.css 2>/dev/null || echo "Aucun fichier CSS"
+                '''
+            }
+        }
+        
+        stage('Test rapide') {
+            steps {
+                sh '''
+                    if [ -f "index.html" ]; then
+                        echo "✓ index.html présent"
+                        echo "Premières lignes:"
+                        head -5 index.html
+                    fi
+                    
+                    if [ -f "style.css" ]; then
+                        echo "✓ style.css présent"
+                        echo "Taille: $(wc -l < style.css) lignes"
+                    fi
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo "Build terminé - Vérifiez la console pour les détails"
+        }
+    }
+}
